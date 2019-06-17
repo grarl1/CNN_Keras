@@ -11,7 +11,7 @@ def uniform(image, noise_ratio):
     :rtype: numpy.array
     '''
     # Generate noise
-    noise = np.random.uniform(0, 255, image.shape)
+    noise = np.random.uniform(0, 1, image.shape)
 
     # Apply noise
     noisy_image = image.copy()
@@ -19,7 +19,7 @@ def uniform(image, noise_ratio):
     idx = np.random.rand(*noisy_image.shape) < noise_ratio
     noisy_image[idx] = noise[idx]
 
-    return noisy_image.astype('uint8')
+    return noisy_image
 
 def gaussian(image, mean, stdev):
     '''Applies Gaussian noise to an image
@@ -33,9 +33,9 @@ def gaussian(image, mean, stdev):
     noise = np.random.normal(mean, stdev, image.shape)
 
     # Apply noise
-    noisy_image = np.clip(image + noise, 0, 255)
+    noisy_image = np.clip(image + noise, 0, 1)
 
-    return noisy_image.astype('uint8')
+    return noisy_image
 
 def poisson(image):
     '''Applies Poisson noise to an image
@@ -44,12 +44,13 @@ def poisson(image):
     :rtype: numpy.array
     '''
     # Generate noise
-    noise = np.random.poisson(image, image.shape)
+    scale = 2**8
+    noise = np.random.poisson(image * scale, image.shape)
 
     # Apply noise
-    noisy_image = np.clip(noise, 0, 255)
+    noisy_image = np.clip(noise / scale, 0, 1)
 
-    return noisy_image.astype('uint8')
+    return noisy_image
 
 def salt_and_pepper(image, noise_ratio):
     '''Applies salt and pepper noise to an image
@@ -59,21 +60,19 @@ def salt_and_pepper(image, noise_ratio):
     :rtype: numpy.array
     '''
     # Get dimensions
-    nrows, ncols, _ = image.shape
+    nrows, ncols, nchannels = image.shape
 
     # Generate noise
-    noise = np.random.randint(0, 2, (nrows, ncols)) * 255
-    noise = np.repeat(noise[:, :, np.newaxis], 3, axis=2)
+    noise = np.random.randint(0, 2, (nrows, ncols, nchannels))
 
     # Apply noise
     noisy_image = image.copy()
 
     # Apply the noise to each channel
-    idx = np.random.rand(nrows, ncols) < noise_ratio
-    idx = np.repeat(idx[:, :, np.newaxis], 3, axis=2)
+    idx = np.random.rand(nrows, ncols, nchannels) < noise_ratio
     noisy_image[idx] = noise[idx]
 
-    return noisy_image.astype('uint8')
+    return noisy_image
 
 def add_noise_to_images(input_dir, output_dir, noise_function, noise_args):
     for item in os.listdir(input_dir):
@@ -83,11 +82,15 @@ def add_noise_to_images(input_dir, output_dir, noise_function, noise_args):
 
         # Only process files
         if os.path.isfile(path):
+
+            # Open image and normalize
             image = Image.open(path)
+            image = np.array(image) / 255.0
             
             # Process
-            args = [np.array(image)] + noise_args
+            args = [image] + noise_args
             noisy_image = noise_function(*args)
+            noisy_image = (noisy_image*255).astype(np.uint8)
 
             # Save images
             Image.fromarray(noisy_image).save(os.path.join(output_dir, item))
@@ -108,7 +111,7 @@ if __name__ == "__main__":
     parser.add_argument('-n', '--noise_type', type=str, required=True, choices=_noise_functions.keys(), help='Type of noise to be added.')
     parser.add_argument('-r', '--ratio', type=float, default=0.1, help='Noise ratio. Only applicable to uniform or salt and pepper noises')
     parser.add_argument('-m', '--mean', type=float, default=0.0, help='Mean. Only applicable to gaussian noise')
-    parser.add_argument('-s', '--stdev', type=float, default=1.0, help='Standard deviation. Only applicable to gaussian noise')
+    parser.add_argument('-s', '--stdev', type=float, default=0.01, help='Standard deviation. Only applicable to gaussian noise')
 
     # Parse args
     args = parser.parse_args()
