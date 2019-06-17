@@ -93,8 +93,9 @@ def train(data_path, val_data_path, config):
     print(model.summary())
     
     # Load model
+    checkpoint_dir = config.get("default", "checkpoint_dir")
     checkpoint_path = config.get("default", "checkpoint_path")
-    if os.path.isfile(checkpoint_path):
+    if os.path.isdir(checkpoint_dir):
         logging.getLogger().info("Checkpoint found. Loading weights.")
         model.load_weights(checkpoint_path)
 
