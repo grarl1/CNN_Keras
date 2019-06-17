@@ -62,9 +62,9 @@ def load_training_data(data_path, val_data_path, config):
     :return: a 2-tuple containing the list of training and validation images
     :rtype: (list(np.array), list(np.array))
     '''
+    # Load images
     data = load_images(data_path)
     val_data = load_images(val_data_path)
-
     logging.getLogger().info("{} images loaded for training".format(len(data)))
     logging.getLogger().info("{} images loaded for validation".format(len(val_data)))
 
@@ -79,7 +79,6 @@ def load_training_data(data_path, val_data_path, config):
     # Extract patches
     data = crop_images_in_patches(data, crop_size, stride)
     val_data = crop_images_in_patches(val_data, crop_size, stride)
-
     logging.getLogger().info("{} subpatches extracted for training".format(len(data)))
     logging.getLogger().info("{} subpatches extracted for validation".format(len(val_data)))
 
@@ -88,12 +87,23 @@ def load_training_data(data_path, val_data_path, config):
 
     return (data, val_data)
  
-def uniform(img):
-    '''Apply uniform noise with random noise density to the given image
+def add_random_noise(img):
+    '''Apply random noise to the given image
     :param img: image to apply noise to
     :type img: np.array
     :return: noisy image
     :rtype: np.array
     '''
-    return img
-    #return noise.uniform(img, 0.5) # TODO
+    noise_functions = [noise.uniform, noise.gaussian, noise.poisson, noise.salt_and_pepper]
+    noise_function = np.random.choice(noise_functions)
+    
+    if noise_function == noise.uniform:
+        args = (np.random.rand() / 0.6,)
+    elif noise_function == noise.gaussian:
+        args = (0, np.random.rand() / 0.5)
+    elif noise_function == noise.salt_and_pepper:
+        args = (np.random.rand() / 0.25,)
+    else:
+        args = ()
+
+    return noise_function(img, *args)

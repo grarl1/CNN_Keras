@@ -32,13 +32,13 @@ def train(data_path, val_data_path, config):
 
     # Preprocess data
     datagen = tf.keras.preprocessing.image.ImageDataGenerator(
-        #rescale = 1.0 / 255.0,
+        preprocessing_function = preprocess.add_random_noise,
         data_format = "channels_last"
     )
     dataflow = datagen.flow(data, data, batch_size=config.getint("training", "batch_size"), save_to_dir="flow")
 
     ## Train model
-    model.fit_generator(dataflow, epochs=1, steps_per_epoch=len(data) // config.getint("training", "batch_size"),  verbose=1) # TODO bath=256
+    model.fit_generator(dataflow, epochs=1, steps_per_epoch=10,  verbose=1) # TODO bath=256
 
 def infer():
     pass
