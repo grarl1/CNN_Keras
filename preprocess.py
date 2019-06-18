@@ -24,6 +24,21 @@ def load_images(dir_path):
             images.append(np.array(image))
 
     return images
+
+def save_image(name, img, dir_path):
+    '''Saves an image to a directory path. Creates the directory if it does not exists.
+    :param name: filename of saved image file
+    :param img: numpy.array
+    :param dir_path: output directory path
+    '''
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+
+    # Save image
+    img = img*255
+    img = img.astype(np.uint8)
+    pil_img = Image.fromarray(img)
+    pil_img.save(os.path.join(dir_path, name))
    
 def crop_images_in_patches(images, crop_size, stride):
     '''Split the images in subimages for the training and validation. Applied padding is VALID.

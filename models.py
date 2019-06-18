@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras import layers
 
-def IRCNN():
+def IRCNN(input_shape):
 
     # Attributes
     seed = 0
@@ -13,7 +13,7 @@ def IRCNN():
 
     # First layer
     model.add(layers.Conv2D(
-            input_shape=(64, 64, 3),
+            input_shape=input_shape,
             filters=64,
             kernel_size=[3, 3], 
             strides = 1,
