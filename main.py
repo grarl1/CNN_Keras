@@ -151,9 +151,6 @@ def train(data_path, val_data_path, config):
     model.fit_generator(dataflow, steps_per_epoch=steps_per_epoch, epochs=config.getint("training", "epochs"), verbose=1,
         callbacks=get_train_callbacks(config), validation_data=val_dataflow, validation_steps=validation_steps)
 
-    # Save model
-    save_model(model, config)
-
 def infer(test_path, output_path, config):
     '''Train the network
     :param test_path: Test data directory path
@@ -190,6 +187,9 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--test', type=str, default="test_data", help='Test/Inference data directory path')
     parser.add_argument('-o', '--output', type=str, default="output", help='Test/Inference output directory path')
     parser.add_argument('-c', '--config', type=str, default="config.ini", help='Network configuration file')
+
+    # Set random seed
+    np.random.seed(0)
 
     # Parse arguments
     args = parser.parse_args()
