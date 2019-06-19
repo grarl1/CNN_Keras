@@ -113,6 +113,9 @@ if __name__ == "__main__":
     parser.add_argument('-m', '--mean', type=float, default=0.0, help='Mean. Only applicable to gaussian noise')
     parser.add_argument('-s', '--stdev', type=float, default=0.01, help='Standard deviation. Only applicable to gaussian noise')
 
+    # Set seed
+    np.random.seed(0)
+
     # Parse args
     args = parser.parse_args()
 
