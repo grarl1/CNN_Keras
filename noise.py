@@ -120,7 +120,8 @@ _noise_functions = {
     "uniform": uniform,
     "gaussian": gaussian,
     "poisson": poisson,
-    "salt_pepper": salt_and_pepper
+    "salt_pepper": salt_and_pepper,
+    "random": add_random_noise,
 }
 
 if __name__ == "__main__":
