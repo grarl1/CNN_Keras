@@ -102,14 +102,14 @@ def add_random_noise(img):
     :return: noisy image
     :rtype: np.array
     '''
-    noise_functions = [noise.uniform, noise.gaussian, noise.poisson, noise.salt_and_pepper]
+    noise_functions = [uniform, gaussian, poisson, salt_and_pepper]
     noise_function = np.random.choice(noise_functions)
     
-    if noise_function == noise.uniform:
+    if noise_function == uniform:
         args = (np.random.rand() * 0.6,)
-    elif noise_function == noise.gaussian:
+    elif noise_function == gaussian:
         args = (0, np.random.rand() * 0.5)
-    elif noise_function == noise.salt_and_pepper:
+    elif noise_function == salt_and_pepper:
         args = (np.random.rand() * 0.25,)
     else:
         args = ()
