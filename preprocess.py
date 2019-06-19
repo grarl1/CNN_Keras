@@ -102,23 +102,4 @@ def load_training_data(data_path, val_data_path, config):
 
     return (data, val_data)
  
-def add_random_noise(img):
-    '''Apply random noise to the given image
-    :param img: image to apply noise to
-    :type img: np.array
-    :return: noisy image
-    :rtype: np.array
-    '''
-    noise_functions = [noise.uniform, noise.gaussian, noise.poisson, noise.salt_and_pepper]
-    noise_function = np.random.choice(noise_functions)
-    
-    if noise_function == noise.uniform:
-        args = (np.random.rand() * 0.6,)
-    elif noise_function == noise.gaussian:
-        args = (0, np.random.rand() * 0.5)
-    elif noise_function == noise.salt_and_pepper:
-        args = (np.random.rand() * 0.25,)
-    else:
-        args = ()
 
-    return noise_function(img, *args)

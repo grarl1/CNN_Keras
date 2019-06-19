@@ -95,6 +95,26 @@ def add_noise_to_images(input_dir, output_dir, noise_function, noise_args):
             # Save images
             Image.fromarray(noisy_image).save(os.path.join(output_dir, item))
 
+def add_random_noise(img):
+    '''Apply random noise to the given image
+    :param img: image to apply noise to
+    :type img: np.array
+    :return: noisy image
+    :rtype: np.array
+    '''
+    noise_functions = [noise.uniform, noise.gaussian, noise.poisson, noise.salt_and_pepper]
+    noise_function = np.random.choice(noise_functions)
+    
+    if noise_function == noise.uniform:
+        args = (np.random.rand() * 0.6,)
+    elif noise_function == noise.gaussian:
+        args = (0, np.random.rand() * 0.5)
+    elif noise_function == noise.salt_and_pepper:
+        args = (np.random.rand() * 0.25,)
+    else:
+        args = ()
+
+    return noise_function(img, *args)
 
 _noise_functions = {
     "uniform": uniform,

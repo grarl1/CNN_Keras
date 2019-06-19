@@ -11,6 +11,7 @@ import logging
 import logging.config
 
 import preprocess
+import noise
 
 def get_model(config, input_shape=None):
     '''Creates a model from config
@@ -63,14 +64,14 @@ def get_generators(data, val_data, config):
 
     # Preprocess data
     datagen = tf.keras.preprocessing.image.ImageDataGenerator(
-        preprocessing_function = preprocess.add_random_noise,
+        preprocessing_function = noise.add_random_noise,
         data_format = "channels_last"
     )
     dataflow = datagen.flow(x=data, y=data, batch_size=batch_size)
 
     # Preprocess validation data
     val_datagen = tf.keras.preprocessing.image.ImageDataGenerator(
-        preprocessing_function = preprocess.add_random_noise,
+        preprocessing_function = noise.add_random_noise,
         data_format = "channels_last"
     )
     val_dataflow = val_datagen.flow(x=val_data, y=val_data, batch_size=batch_size)
