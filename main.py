@@ -67,14 +67,14 @@ def get_generators(data, val_data, config):
         preprocessing_function = noise.add_random_noise,
         data_format = "channels_last"
     )
-    dataflow = datagen.flow(x=data, y=data, batch_size=batch_size)
+    dataflow = datagen.flow(x=data, y=data, batch_size=batch_size, seed=0)
 
     # Preprocess validation data
     val_datagen = tf.keras.preprocessing.image.ImageDataGenerator(
         preprocessing_function = noise.add_random_noise,
         data_format = "channels_last"
     )
-    val_dataflow = val_datagen.flow(x=val_data, y=val_data, batch_size=batch_size)
+    val_dataflow = val_datagen.flow(x=val_data, y=val_data, batch_size=batch_size, seed=0)
 
     return (dataflow, val_dataflow)
 
