@@ -135,7 +135,6 @@ def infer(test_path, output_path, config):
     '''
     # Load test images
     test_images = preprocess.load_images(test_path)
-    test_images = preprocess.normalize_images(test_images)
 
     for name, image in zip(os.listdir(test_path), test_images):
         # Create model
@@ -145,11 +144,12 @@ def infer(test_path, output_path, config):
         load_model(model, config)
 
         # Make prediction
+        image = preprocess.normalize_image(image)
         image = image.reshape((1, *image.shape))
-        prediction = model.predict(image, verbose=1)
+        prediction = model.predict(image, verbose=1)[0]
         
-        # Clip
-        prediction = np.clip(prediction, 0, 1)[0]
+        # Clip result
+        prediction = np.clip(prediction, 0, 1)
 
         # Save images
         preprocess.save_image(name, prediction, output_path)
