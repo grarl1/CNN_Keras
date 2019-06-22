@@ -80,8 +80,6 @@ def generate_training_data_single(data_path, config):
     batch_size = config.getint('training', 'batch_size')
     crop_size = config.getint('training', 'patch_crop_size')
     stride = config.getint('training', 'patch_stride')
-    logging.getLogger().info("Creating generator with batch size {}, crop size {}, stride {}".format(
-        batch_size, crop_size, stride))
 
     # Read image list
     file_paths = [os.path.join(data_path, f) for f in os.listdir(data_path)]
@@ -133,7 +131,8 @@ def generate_training_data(data_path, config):
     (batch_size, rows, columns, channels)
     '''
     while True:
-        yield generate_trainig_data_single(data_path, config)
+        for data in generate_training_data_single(data_path, config):
+            yield data
 
 if __name__ == '__main__':
 
