@@ -6,27 +6,17 @@ import noise
 
 from PIL import Image
 
-def load_images(dir_path):
-    '''Load images from a directory path. The directory must contain images only
-    :param dir_path: directory path
-    :return: list of images
-    :rtype: list(np.array)
+def load_image(path):
+    '''Load image from path. 
+    :param path: image file path
+    :return: image
+    :rtype: numpy.array
     '''
-    # Store images
-    images = []
-
-    # Iterate all the files
-    for file_path in os.listdir(dir_path):
-        # Process only files
-        file_fullpath = os.path.join(dir_path, file_path)
-        if os.path.isfile(file_fullpath):
-            image = Image.open(file_fullpath)
-            images.append(np.array(image))
-
-    return images
+    image = Image.open(path)
+    return np.array(image)
 
 def save_image(name, img, dir_path):
-    '''Saves an image to a directory path. Creates the directory if it does not exists.
+    '''Saves a normalized image to a directory path. Creates the directory if it does not exists.
     :param name: filename of saved image file
     :param img: numpy.array
     :param dir_path: output directory path
@@ -35,11 +25,88 @@ def save_image(name, img, dir_path):
         os.makedirs(dir_path)
 
     # Save image
-    img = img*255
-    img = img.astype(np.uint8)
-    pil_img = Image.fromarray(img)
-    pil_img.save(os.path.join(dir_path, name))
+    output = denormalize_image(img)
+    output = Image.fromarray(output)
+    output.save(os.path.join(dir_path, name))
    
+def normalize_image(image):
+    '''Normalize image to range [0,1]
+    :param image: image
+    :type image: np.array
+    :return: image
+    :rtype: np.array
+    '''
+    return image * (1.0 / 255.0)
+
+def denormalize_image(image):
+    '''Denormalize image from range [0,1] to range [0,255]
+    :param image: image
+    :type image: np.array
+    :return: image
+    :rtype: np.array
+    '''
+    output = image * 255.0
+    return output.astype(np.uint8)
+
+def downsample_normalized(image, config):
+    '''Downsample an image using bicubic interpolation
+    :param image: image
+    :type image: np.array
+    :return: image
+    :rtype: np.array
+    '''
+    # Get scale
+    scale = config.getint("fsrcnn", "upscale")
+
+    # Get image
+    output = denormalize_image(image)
+    output = output[:,:,0] 
+    output = Image.fromarray(output)
+
+    # Check size
+    (width, height) = output.size
+    if width % scale != 0 or height % scale != 0:
+        raise ValueError("Only exact downscale is implemented")
+
+    # Rescale
+    output = output.resize((width//scale, height//scale), Image.BICUBIC)
+    output = np.array(output)
+    output = np.reshape(output, (width//scale, height//scale, 1))
+    return normalize_image(output)
+
+def preprocess_label(image, config):
+    '''Preprocess label
+    :param image: np.array
+    :param config: config parser
+    :return: Image preprocessed
+    '''
+    model_name = config.get("default", "target_net")
+    if model_name == "FSRCNN":
+        output = Image.fromarray(image) # Create PIL Image
+        output = output.convert('YCbCr') # Convert to YCbCr
+        output = np.array(output) # Convert to numpy array
+        output = output[:,:,0] # Keep Y channel, discard CbCr channels
+        output = normalize_image(output) # Normalize image
+        return output
+    elif model_name == "IRCNN":
+        return normalize_image(image) # Normalize image
+    else:
+        raise ValueError("Not supported network {}".format(model_name))
+
+def generate_data(labels, config):
+    '''Create data from labels
+    :param labels: list of labels
+    :param config: config parser
+    :return: list of data created from labels
+    '''
+    model_name = config.get("default", "target_net")
+    if model_name == "FSRCNN":
+        return np.asarray([downsample_normalized(y, config) for y in labels])
+    elif model_name == "IRCNN":
+        return np.asarray([noise.add_random_noise(y) for y in labels])
+    else:
+        raise ValueError("Not supported network {}".format(model_name))
+
 def crop_image_in_subpatches(image, crop_size, stride):
     '''Split the image in subimages. Applied padding is VALID.
     :param image: np.array
@@ -51,7 +118,11 @@ def crop_image_in_subpatches(image, crop_size, stride):
     # Create list for subpatches
     sub_patches = []
 
-    rows, cols, channels = image.shape
+    if len(image.shape) == 3:
+        rows, cols, channels = image.shape
+    else:
+        rows, cols, channels = (*image.shape, 1)
+
     for x in range(0, rows - crop_size + 1, stride):
       for y in range(0, cols - crop_size + 1, stride):
         sub_patch = image[x : x + crop_size, y : y + crop_size]
@@ -59,15 +130,6 @@ def crop_image_in_subpatches(image, crop_size, stride):
         sub_patches.append(sub_patch)
           
     return np.asarray(sub_patches)
-
-def normalize_image(image):
-    '''Normalize image to range [0,1]
-    :param image: image
-    :param image: np.array
-    :return: image
-    :rtype: np.array
-    '''
-    return image * (1.0 / 255.0)
 
 def generate_training_data_single(data_path, config):
     '''Yields pre-processed training data
@@ -95,14 +157,15 @@ def generate_training_data_single(data_path, config):
         # Read read_size images
         labels = []
         for file_path in file_paths[i : i + read_size]:
-            image = np.array(Image.open(file_path)) # Load image
-            image = normalize_image(image) # Normalize image
+            image = load_image(file_path) # Load image
+            image = preprocess_label(image, config) # Prepocess label
             labels.extend(crop_image_in_subpatches(image, crop_size, stride)) # Crop in subpatches
 
         # Shuffle subpatches
         np.random.shuffle(labels)
+
         # Add random noise
-        data = np.asarray([noise.add_random_noise(y) for y in labels])
+        data = generate_data(labels, config)
 
         while len(data) != 0:
             # Compute len to pop
@@ -134,6 +197,7 @@ def generate_training_data(data_path, config):
         for data in generate_training_data_single(data_path, config):
             yield data
 
+# This main will be used count batches in a dataset given the parameters
 if __name__ == '__main__':
 
     # Imports specific to this main
@@ -152,6 +216,7 @@ if __name__ == '__main__':
     config = configparser.ConfigParser()
     config.read(args.config)
 
+    # Count batches and crops
     n_batches = 0
     n_crops = 0
     for x, y in generate_training_data_single(args.data_path, config):

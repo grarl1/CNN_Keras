@@ -2,7 +2,7 @@ import os
 import argparse
 import configparser
 
-from models import IRCNN
+from models import FSRCNN, IRCNN
 
 import numpy as np
 import tensorflow as tf
@@ -11,23 +11,38 @@ import logging
 import logging.config
 
 import preprocess
-import noise
 
 def get_model(config, input_shape=None):
     '''Creates a model from config
     :param config: config parser
     :return: Keras model
     '''
-    # Create model
+    # Get model from config
+    model_name = config.get("default", "target_model")
+
+    # Get input shape
     if not input_shape:
         crop_size = config.getint("training", "patch_crop_size")
         input_shape = (crop_size, crop_size, 3)
-    model = IRCNN(input_shape)
+
+    # Create model
+    logging.getLogger().info("Creating model: {}".format(model_name))
+    if model_name == "FSRCNN":
+        upscale = config.getint("fsrcnn", "upscale")
+        model = FSRCNN(input_shape, upscale)
+        loss = tf.keras.losses.MeanSquaredError(),
+        optimizer = tf.keras.optimizers.SGD(config.getfloat("training", "init_lr")),
+    elif model_name == "IRCNN":
+        model = IRCNN(input_shape)
+        loss = tf.keras.losses.MeanSquaredError(),
+        optimizer = tf.keras.optimizers.Adam(config.getfloat("training", "init_lr")),
+    else:
+        raise ValueError("Not supported network {}".format(model_name))
 
     # Compile model
     model.compile(
-        loss = tf.keras.losses.MeanSquaredError(),
-        optimizer = tf.keras.optimizers.Adam(config.getfloat("training", "init_lr")),
+        loss = loss,
+        optimizer = optimizer,
     )
 
     return model
@@ -133,10 +148,10 @@ def infer(test_path, output_path, config):
     :param output_path: Output directory path
     :param config: config parser
     '''
-    # Load test images
-    test_images = preprocess.load_images(test_path)
+    for name in os.listdir(test_path):
+        # Load image
+        image = preprocess.load_image(os.path.join(test_path, name))
 
-    for name, image in zip(os.listdir(test_path), test_images):
         # Create model
         model = get_model(config, image.shape)
             
@@ -156,7 +171,7 @@ def infer(test_path, output_path, config):
 
 if __name__ == '__main__':
     # Define arguments
-    parser = argparse.ArgumentParser(description='Train or infer using IRCNN model')
+    parser = argparse.ArgumentParser(description='Train or infer CNN models')
     parser.add_argument('-t', '--train', action='store_true', help='Train the CNN')
     parser.add_argument('-d', '--data', type=str, default="train_data", help='Training data directory path')
     parser.add_argument('-v', '--val', type=str, default="val_data", help='Validation data directory path')
