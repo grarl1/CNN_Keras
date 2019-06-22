@@ -53,31 +53,6 @@ def save_model(model, config):
     logging.getLogger().info("Saving model weights")
     model.save_weights(checkpoint_path)
 
-def get_generators(data, val_data, config):
-    '''Return generators for training data and validation data
-    :param data: numpy array containing the list of training images
-    :param val_data: numpy array containing the list of validation images
-    :param config: config parser
-    '''
-    # Get batch size
-    batch_size = config.getint("training", "batch_size")
-
-    # Preprocess data
-    datagen = tf.keras.preprocessing.image.ImageDataGenerator(
-        preprocessing_function = noise.add_random_noise,
-        data_format = "channels_last"
-    )
-    dataflow = datagen.flow(x=data, y=data, batch_size=batch_size, seed=0)
-
-    # Preprocess validation data
-    val_datagen = tf.keras.preprocessing.image.ImageDataGenerator(
-        preprocessing_function = noise.add_random_noise,
-        data_format = "channels_last"
-    )
-    val_dataflow = val_datagen.flow(x=val_data, y=val_data, batch_size=batch_size, seed=0)
-
-    return (dataflow, val_dataflow)
-
 def get_train_callbacks(config):
     '''Returns a list of keras callbacks
     :param config: config parser
@@ -141,16 +116,16 @@ def train(data_path, val_data_path, config):
         json_file.write(model.to_json())
 
     # Load training and validation datasets
-    (data, val_data) = preprocess.load_training_data(data_path, val_data_path, config)
-    (dataflow, val_dataflow) = get_generators(data, val_data, config)
+    dataflow = preprocess.generate_training_data(data_path, config)
+    val_dataflow = preprocess.generate_training_data(val_data_path, config)
+
+    # Load steps
+    steps = config.getint("training", "steps")
+    val_steps = config.getint("training", "val_steps")
     
     # Train model
-    batch_size = config.getint("training", "batch_size")
-    steps_per_epoch = len(data) // batch_size
-    validation_steps = len(val_data) // batch_size
-
-    model.fit_generator(dataflow, steps_per_epoch=steps_per_epoch, epochs=config.getint("training", "epochs"), verbose=1,
-        callbacks=get_train_callbacks(config), validation_data=val_dataflow, validation_steps=validation_steps)
+    model.fit_generator(dataflow, steps_per_epoch=steps, epochs=config.getint("training", "epochs"), verbose=1,
+        callbacks=get_train_callbacks(config), validation_data=val_dataflow, validation_steps=val_steps)
 
 def infer(test_path, output_path, config):
     '''Train the network
