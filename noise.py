@@ -74,27 +74,6 @@ def salt_and_pepper(image, noise_ratio):
 
     return noisy_image
 
-def add_noise_to_images(input_dir, output_dir, noise_function, noise_args):
-    for item in os.listdir(input_dir):
-        # Get image path
-        print("Procesing {}".format(item))
-        path = os.path.join(input_dir, item)
-
-        # Only process files
-        if os.path.isfile(path):
-
-            # Open image and normalize
-            image = Image.open(path)
-            image = np.array(image) / 255.0
-            
-            # Process
-            args = [image] + noise_args
-            noisy_image = noise_function(*args)
-            noisy_image = (noisy_image*255).astype(np.uint8)
-
-            # Save images
-            Image.fromarray(noisy_image).save(os.path.join(output_dir, item))
-
 def add_random_noise(img):
     '''Apply random noise to the given image
     :param img: image to apply noise to
@@ -115,6 +94,27 @@ def add_random_noise(img):
         args = ()
 
     return noise_function(img, *args)
+
+def add_noise_to_images(input_dir, output_dir, noise_function, noise_args):
+    for item in os.listdir(input_dir):
+        # Get image path
+        print("Procesing {}".format(item))
+        path = os.path.join(input_dir, item)
+
+        # Only process files
+        if os.path.isfile(path):
+
+            # Open image and normalize
+            image = Image.open(path)
+            image = np.array(image) / 255.0
+            
+            # Process
+            args = [image] + noise_args
+            noisy_image = noise_function(*args)
+            noisy_image = (noisy_image*255).astype(np.uint8)
+
+            # Save images
+            Image.fromarray(noisy_image).save(os.path.join(output_dir, item))
 
 _noise_functions = {
     "uniform": uniform,
