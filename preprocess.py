@@ -64,14 +64,14 @@ def downsample_normalized(image, config):
     output = Image.fromarray(output)
 
     # Check size
-    (width, height) = output.size
-    if width % scale != 0 or height % scale != 0:
+    (height, width) = output.size
+    if height % scale != 0 or width % scale != 0:
         raise ValueError("Only exact downscale is implemented")
 
     # Rescale
-    output = output.resize((width//scale, height//scale), Image.BICUBIC)
+    output = output.resize((height//scale, width//scale), Image.BICUBIC)
     output = np.array(output)
-    output = np.reshape(output, (width//scale, height//scale, 1))
+    output = np.reshape(output, (height//scale, width//scale, 1))
     return normalize_image(output)
 
 def preprocess_label(image, config):
@@ -196,6 +196,52 @@ def generate_training_data(data_path, config):
     while True:
         for data in generate_training_data_single(data_path, config):
             yield data
+
+def merge(Y, image, config):
+  '''Merges super-resolved image with chroma components
+  :param Y: Y chroma component to be merged
+  :param image: image to extract the rest of components from
+  :param config: config parser
+  :return: merged image
+  '''
+  # Denormalize Y channel
+  height, weight, _ = Y.shape
+  Y_out = Y.reshape((height, weight, 1))
+  Y_out = denormalize_image(Y_out)
+
+  # Convert image to YCbCr
+  Y_cbcr = image.convert('YCbCr')
+  # Super resolve all channels
+  Y_cbcr = Y_cbcr.resize((height, weight), Image.BICUBIC)
+  # Get CbCr channels
+  cbcr = np.reshape(height, weight, 3)[:,:,1:]
+
+  # Merge Y with CbCr
+  return np.concatenate((Y_out, cbcr), axis=-1)
+
+def preinference(image, config):
+    '''Preprocess image pre inference
+    :param image: image to be preprocessed
+    :param config: config parser
+    :return: preprocessed image
+    '''
+    output = preprocess_label(image, config)
+    return output.reshape((1, *output.shape))
+
+def postinference(config, hr_image, lr_image=None):
+    '''Postprocess image after inference
+    :param image: image to be postprocessed
+    :param config: config parser
+    :return: post processed image
+    '''
+    model_name = config.get("default", "target_net")
+    if model_name == "FSRCNN":
+        output = np.clip(hr_image, 0, 1)
+        return merge(hr_image, lr_image, config)
+    elif model_name == "IRCNN":
+        return np.clip(hr_image, 0, 1)
+    else:
+        raise ValueError("Not supported network {}".format(model_name))
 
 # This main will be used count batches in a dataset given the parameters
 if __name__ == '__main__':

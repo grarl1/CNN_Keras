@@ -159,12 +159,11 @@ def infer(test_path, output_path, config):
         load_model(model, config)
 
         # Make prediction
-        image = preprocess.normalize_image(image)
-        image = image.reshape((1, *image.shape))
+        image = preprocess.preinference(image, config)
         prediction = model.predict(image, verbose=1)[0]
         
         # Clip result
-        prediction = np.clip(prediction, 0, 1)
+        prediction = preprocess.postinference(config, prediction, image)
 
         # Save images
         preprocess.save_image(name, prediction, output_path)
