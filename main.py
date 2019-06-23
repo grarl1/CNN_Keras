@@ -18,7 +18,7 @@ def get_model(config, input_shape=None):
     :return: Keras model
     '''
     # Get model from config
-    model_name = config.get("default", "target_model")
+    model_name = config.get("default", "target_net")
 
     # Get input shape
     if not input_shape:
@@ -30,12 +30,12 @@ def get_model(config, input_shape=None):
     if model_name == "FSRCNN":
         upscale = config.getint("fsrcnn", "upscale")
         model = FSRCNN(input_shape, upscale)
-        loss = tf.keras.losses.MeanSquaredError(),
-        optimizer = tf.keras.optimizers.SGD(config.getfloat("training", "init_lr")),
+        loss = tf.keras.losses.MeanSquaredError()
+        optimizer = tf.keras.optimizers.SGD(config.getfloat("training", "init_lr"))
     elif model_name == "IRCNN":
         model = IRCNN(input_shape)
-        loss = tf.keras.losses.MeanSquaredError(),
-        optimizer = tf.keras.optimizers.Adam(config.getfloat("training", "init_lr")),
+        loss = tf.keras.losses.MeanSquaredError()
+        optimizer = tf.keras.optimizers.Adam(config.getfloat("training", "init_lr"))
     else:
         raise ValueError("Not supported network {}".format(model_name))
 

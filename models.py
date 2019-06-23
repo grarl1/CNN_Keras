@@ -67,8 +67,8 @@ def FSRCNN(input_shape, upscale):
 
     # Deconvolution
     model.add(layers.Conv2DTranspose(
-        filters = 1
-        kernel_size = 9
+        filters = 1,
+        kernel_size = 9,
         strides = upscale,
         padding = "same",
         data_format = "channels_last",
