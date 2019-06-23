@@ -26,10 +26,11 @@ def FSRCNN(input_shape, upscale):
         kernel_size = 5,
         padding = "same",
         data_format = "channels_last",
-        activation = layers.PReLU,
+        activation = None, # PReLU defined after
         use_bias = True,
         kernel_initializer = w_init,
     ))
+    model.add(layers.PReLU())
 
     # Shrinking
     model.add(layers.Conv2D(
@@ -37,10 +38,11 @@ def FSRCNN(input_shape, upscale):
         kernel_size = 1,
         padding = "same",
         data_format = "channels_last",
-        activation = layers.PReLU,
+        activation = None, # PReLU defined after
         use_bias = True,
         kernel_initializer = w_init,
     ))
+    model.add(layers.PReLU())
 
     # Mapping
     for _ in range(m):
@@ -49,10 +51,11 @@ def FSRCNN(input_shape, upscale):
             kernel_size = 3,
             padding = "same",
             data_format = "channels_last",
-            activation = layers.PReLU,
+            activation = None, # PReLU defined after
             use_bias = True,
             kernel_initializer = w_init,
         ))
+        model.add(layers.PReLU())
 
     # Expanding
     model.add(layers.Conv2D(
@@ -60,10 +63,11 @@ def FSRCNN(input_shape, upscale):
         kernel_size = 1,
         padding = "same",
         data_format = "channels_last",
-        activation = layers.PReLU,
+        activation = None, # PReLU defined after
         use_bias = True,
         kernel_initializer = w_init,
     ))
+    model.add(layers.PReLU())
 
     # Deconvolution
     model.add(layers.Conv2DTranspose(
