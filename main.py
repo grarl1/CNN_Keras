@@ -17,25 +17,30 @@ def get_model(config, input_shape=None):
     :param config: config parser
     :return: Keras model
     '''
-    # Get model from config
+    # Get config
     model_name = config.get("default", "target_net")
-
-    # Get input shape
-    if not input_shape:
-        crop_size = config.getint("training", "patch_crop_size")
-        input_shape = (crop_size, crop_size, 3)
+    crop_size = config.getint("training", "patch_crop_size")
+    upscale = config.getint("fsrcnn", "upscale")
 
     # Create model
     logging.getLogger().info("Creating model: {}".format(model_name))
+
     if model_name == "FSRCNN":
-        upscale = config.getint("fsrcnn", "upscale")
+
+        if not input_shape:
+            input_shape = (crop_size // upscale, crop_size // upscale, 1)
         model = FSRCNN(input_shape, upscale)
         loss = tf.keras.losses.MeanSquaredError()
         optimizer = tf.keras.optimizers.SGD(config.getfloat("training", "init_lr"))
+
     elif model_name == "IRCNN":
+
+        if not input_shape:
+            input_shape = (crop_size, crop_size, 3)
         model = IRCNN(input_shape)
         loss = tf.keras.losses.MeanSquaredError()
         optimizer = tf.keras.optimizers.Adam(config.getfloat("training", "init_lr"))
+
     else:
         raise ValueError("Not supported network {}".format(model_name))
 
@@ -125,10 +130,6 @@ def train(data_path, val_data_path, config):
         
     # Load model
     load_model(model, config)
-
-    # Save model info
-    with open(config.get("default", "model_json"), "w") as json_file:
-        json_file.write(model.to_json())
 
     # Load training and validation datasets
     dataflow = preprocess.generate_training_data(data_path, config)
