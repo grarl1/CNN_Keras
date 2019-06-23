@@ -30,7 +30,7 @@ def FSRCNN(input_shape, upscale):
         use_bias = True,
         kernel_initializer = w_init,
     ))
-    model.add(layers.PReLU())
+    model.add(layers.PReLU(shared_axes=[1, 2]))
 
     # Shrinking
     model.add(layers.Conv2D(
@@ -42,7 +42,7 @@ def FSRCNN(input_shape, upscale):
         use_bias = True,
         kernel_initializer = w_init,
     ))
-    model.add(layers.PReLU())
+    model.add(layers.PReLU(shared_axes=[1, 2]))
 
     # Mapping
     for _ in range(m):
@@ -55,7 +55,7 @@ def FSRCNN(input_shape, upscale):
             use_bias = True,
             kernel_initializer = w_init,
         ))
-        model.add(layers.PReLU())
+        model.add(layers.PReLU(shared_axes=[1, 2]))
 
     # Expanding
     model.add(layers.Conv2D(
@@ -67,7 +67,7 @@ def FSRCNN(input_shape, upscale):
         use_bias = True,
         kernel_initializer = w_init,
     ))
-    model.add(layers.PReLU())
+    model.add(layers.PReLU(shared_axes=[1, 2]))
 
     # Deconvolution
     model.add(layers.Conv2DTranspose(
