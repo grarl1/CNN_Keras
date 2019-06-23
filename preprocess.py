@@ -87,6 +87,7 @@ def preprocess_label(image, config):
         output = np.array(output) # Convert to numpy array
         output = output[:,:,0] # Keep Y channel, discard CbCr channels
         output = normalize_image(output) # Normalize image
+        output = output.reshape(*output.shape, 1)
         return output
     elif model_name == "IRCNN":
         return normalize_image(image) # Normalize image
@@ -210,14 +211,16 @@ def merge(Y, image, config):
   Y_out = denormalize_image(Y_out)
 
   # Convert image to YCbCr
-  Y_cbcr = image.convert('YCbCr')
+  Y_cbcr = Image.fromarray(image).convert("YCbCr")
   # Super resolve all channels
   Y_cbcr = Y_cbcr.resize((height, weight), Image.BICUBIC)
   # Get CbCr channels
-  cbcr = np.reshape(height, weight, 3)[:,:,1:]
+  cbcr = np.array(Y_cbcr).reshape(height, weight, 3)[:,:,1:]
 
   # Merge Y with CbCr
-  return np.concatenate((Y_out, cbcr), axis=-1)
+  output = np.concatenate((Y_out, cbcr), axis=-1)
+  output = Image.fromarray(output, "YCbCr").convert("RGB")
+  return normalize_image(np.array(output))
 
 def preinference(image, config):
     '''Preprocess image pre inference

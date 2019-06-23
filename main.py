@@ -152,16 +152,16 @@ def infer(test_path, output_path, config):
     for name in os.listdir(test_path):
         # Load image
         image = preprocess.load_image(os.path.join(test_path, name))
+        net_input = preprocess.preinference(image, config)
 
         # Create model
-        model = get_model(config, image.shape)
+        model = get_model(config, net_input[0].shape)
             
         # Load model
         load_model(model, config)
 
         # Make prediction
-        image = preprocess.preinference(image, config)
-        prediction = model.predict(image, verbose=1)[0]
+        prediction = model.predict(net_input, verbose=1)[0]
         
         # Clip result
         prediction = preprocess.postinference(config, prediction, image)
