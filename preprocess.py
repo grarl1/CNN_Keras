@@ -238,7 +238,7 @@ def merge(Y, image, config):
   # Convert image to YCbCr
   Y_cbcr = Image.fromarray(image).convert("YCbCr")
   # Super resolve all channels
-  Y_cbcr = Y_cbcr.resize((height, weight), Image.BICUBIC)
+  Y_cbcr = Y_cbcr.resize((weight, height), Image.BICUBIC)
   # Get CbCr channels
   cbcr = np.array(Y_cbcr).reshape(height, weight, 3)[:,:,1:]
 
