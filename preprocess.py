@@ -64,12 +64,12 @@ def downsample_normalized(image, config):
     output = Image.fromarray(output)
 
     # Check size
-    (height, width) = output.size
-    if height % scale != 0 or width % scale != 0:
+    (width, height) = output.size
+    if width % scale != 0 or height % scale != 0:
         raise ValueError("Only exact downscale is implemented")
 
     # Rescale
-    output = output.resize((height//scale, width//scale), Image.BICUBIC)
+    output = output.resize((width//scale, height//scale), Image.BICUBIC)
     output = np.array(output)
     output = np.reshape(output, (height//scale, width//scale, 1))
     return normalize_image(output)
@@ -80,31 +80,38 @@ def preprocess_label(image, config):
     :param config: config parser
     :return: Image preprocessed
     '''
+    # Read config
     model_name = config.get("default", "target_net")
+    scale = config.getint("fsrcnn", "upscale")
+
     if model_name == "FSRCNN":
         output = Image.fromarray(image) # Create PIL Image
+        width, height = output.size
+        output = output.crop((0, 0, width - width % scale, height - height % scale))
         output = output.convert('YCbCr') # Convert to YCbCr
         output = np.array(output) # Convert to numpy array
         output = output[:,:,0] # Keep Y channel, discard CbCr channels
         output = normalize_image(output) # Normalize image
         output = output.reshape(*output.shape, 1)
         return output
+
     elif model_name == "IRCNN":
         return normalize_image(image) # Normalize image
+
     else:
         raise ValueError("Not supported network {}".format(model_name))
 
-def generate_data(labels, config):
-    '''Create data from labels
-    :param labels: list of labels
+def generate_data(label, config):
+    '''Create data from label
+    :param label: label
     :param config: config parser
-    :return: list of data created from labels
+    :return: data created from label
     '''
     model_name = config.get("default", "target_net")
     if model_name == "FSRCNN":
-        return np.asarray([downsample_normalized(y, config) for y in labels])
+        return downsample_normalized(label, config)
     elif model_name == "IRCNN":
-        return np.asarray([noise.add_random_noise(y) for y in labels])
+        return noise.add_random_noise(label)
     else:
         raise ValueError("Not supported network {}".format(model_name))
 
@@ -132,17 +139,31 @@ def crop_image_in_subpatches(image, crop_size, stride):
           
     return np.asarray(sub_patches)
 
-def generate_training_data_single(data_path, config):
+def generate_training_datum(image, config):
+    '''Generate a single datum from a label
+    :param image: image label
+    :param config: config parser
+    :return: data from label
+    '''
+    label = preprocess_label(image, config) 
+    data = generate_data(label, config)
+    return (data, label)
+
+def generate_training_data_all(data_path, config):
     '''Yields pre-processed training data
     :param data_path: training images directory path
     :param config: config parser
     :return: 2-tuples of numpy.arrays containing (data, label)
     '''
     # Read config
+    target_net = config.get("default", "target_net")
     read_size = config.getint('training', 'read_size')
     batch_size = config.getint('training', 'batch_size')
     crop_size = config.getint('training', 'patch_crop_size')
     stride = config.getint('training', 'patch_stride')
+    upscale = config.getint('fsrcnn', 'upscale')
+    dcrop_size = (crop_size // upscale) if target_net == "FSRCNN" else crop_size
+    dstride = (stride // upscale) if target_net == "FSRCNN" else stride
 
     # Read image list
     file_paths = [os.path.join(data_path, f) for f in os.listdir(data_path)]
@@ -156,18 +177,22 @@ def generate_training_data_single(data_path, config):
     for i in range(0, len(file_paths), read_size):
 
         # Read read_size images
-        labels = []
+        labels, data = [], []
         for file_path in file_paths[i : i + read_size]:
-            image = load_image(file_path) # Load image
-            image = preprocess_label(image, config) # Prepocess label
-            labels.extend(crop_image_in_subpatches(image, crop_size, stride)) # Crop in subpatches
+            # Read image
+            image = load_image(file_path) 
+            # Generate data
+            datum, label = generate_training_datum(image, config)
+            # Crop image in subpatches
+            labels.extend(crop_image_in_subpatches(label, crop_size, stride))
+            data.extend(crop_image_in_subpatches(datum, dcrop_size, dstride))
 
-        # Shuffle subpatches
-        np.random.shuffle(labels)
-
-        # Add random noise
-        data = generate_data(labels, config)
-
+        # Sort crops randomly
+        indices = np.random.permutation(len(labels))
+        labels = [labels[i] for i in indices]
+        data = [data[i] for i in indices]
+        
+        # Generate batches
         while len(data) != 0:
             # Compute len to pop
             len_to_pop = min(len(data), batch_size - len(data_gen))
@@ -195,7 +220,7 @@ def generate_training_data(data_path, config):
     (batch_size, rows, columns, channels)
     '''
     while True:
-        for data in generate_training_data_single(data_path, config):
+        for data in generate_training_data_all(data_path, config):
             yield data
 
 def merge(Y, image, config):
@@ -268,7 +293,14 @@ if __name__ == '__main__':
     # Count batches and crops
     n_batches = 0
     n_crops = 0
-    for x, y in generate_training_data_single(args.data_path, config):
+#    counter = 0
+    for x, y in generate_training_data_all(args.data_path, config):
+
+#        for x0, y0 in zip(x,y):
+#            save_image("x0_{}.png".format(counter), x0[:,:,0], "preprocess_dir")
+#            save_image("y0_{}.png".format(counter), y0[:,:,0], "preprocess_dir")
+#            counter += 1
+
         n_batches += 1
         n_crops += len(x)
         if n_batches % config.getint("training", "read_size") == 0:
