@@ -12,10 +12,6 @@ def FSRCNN(input_shape, upscale):
     s = 16 # Number of shrinking filters
     m = 4 # Mapping depth
 
-    # Initializers
-    w_init = tf.keras.initializers.VarianceScaling(seed=0)
-    w_deconv_init = tf.keras.initializers.RandomNormal(mean=0.0, stddev=0.001, seed=0)
-
     # Create model
     model = tf.keras.models.Sequential()
 
@@ -28,7 +24,7 @@ def FSRCNN(input_shape, upscale):
         data_format = "channels_last",
         activation = None, # PReLU defined after
         use_bias = True,
-        kernel_initializer = w_init,
+        kernel_initializer = tf.keras.initializers.VarianceScaling(0.01),
     ))
     model.add(layers.PReLU(shared_axes=[1, 2]))
 
@@ -40,7 +36,7 @@ def FSRCNN(input_shape, upscale):
         data_format = "channels_last",
         activation = None, # PReLU defined after
         use_bias = True,
-        kernel_initializer = w_init,
+        kernel_initializer = tf.keras.initializers.VarianceScaling(2),
     ))
     model.add(layers.PReLU(shared_axes=[1, 2]))
 
@@ -53,7 +49,7 @@ def FSRCNN(input_shape, upscale):
             data_format = "channels_last",
             activation = None, # PReLU defined after
             use_bias = True,
-            kernel_initializer = w_init,
+            kernel_initializer = tf.keras.initializers.VarianceScaling(2),
         ))
         model.add(layers.PReLU(shared_axes=[1, 2]))
 
@@ -65,7 +61,7 @@ def FSRCNN(input_shape, upscale):
         data_format = "channels_last",
         activation = None, # PReLU defined after
         use_bias = True,
-        kernel_initializer = w_init,
+        kernel_initializer = tf.keras.initializers.VarianceScaling(2),
     ))
     model.add(layers.PReLU(shared_axes=[1, 2]))
 
@@ -78,7 +74,7 @@ def FSRCNN(input_shape, upscale):
         data_format = "channels_last",
         activation = None,
         use_bias = True,
-        kernel_initializer = w_deconv_init,
+        kernel_initializer = tf.keras.initializers.RandomNormal(mean=0.0, stddev=0.001),
     ))
 
     return model
