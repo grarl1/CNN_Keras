@@ -69,7 +69,7 @@ def downsample_normalized(image, config):
         raise ValueError("Only exact downscale is implemented")
 
     # Rescale
-    output = output.resize((width//scale, height//scale), Image.BICUBIC)
+    output = output.resize((width//scale, height//scale), Image.LANCZOS)
     output = np.array(output)
     output = np.reshape(output, (height//scale, width//scale, 1))
     return normalize_image(output)
