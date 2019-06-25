@@ -85,7 +85,6 @@ def IRCNN(input_shape):
     :param input_shape: 3-tuple representing the image shape
     '''
     # Attributes
-    seed = 0
     kernel_weight_decay = 1e-4
     dilation_rate = [1, 2, 3, 4, 3, 2, 1]
 
@@ -102,7 +101,7 @@ def IRCNN(input_shape):
             data_format = "channels_last",
             dilation_rate = dilation_rate[0],
             activation = tf.nn.relu,
-            kernel_initializer = tf.keras.initializers.glorot_uniform(seed=seed),
+            kernel_initializer = tf.keras.initializers.glorot_uniform(),
             kernel_regularizer = tf.keras.regularizers.l2(kernel_weight_decay)
     ))
 
@@ -116,7 +115,7 @@ def IRCNN(input_shape):
             data_format = "channels_last",
             dilation_rate = dilation_rate[i-1],
             activation = None,
-            kernel_initializer = tf.keras.initializers.glorot_uniform(seed=seed),
+            kernel_initializer = tf.keras.initializers.glorot_uniform(),
             kernel_regularizer = tf.keras.regularizers.l2(kernel_weight_decay)
         ))
         model.add(layers.BatchNormalization())
@@ -132,7 +131,7 @@ def IRCNN(input_shape):
             data_format = "channels_last",
             dilation_rate = dilation_rate[-1],
             activation = None,
-            kernel_initializer = tf.keras.initializers.glorot_uniform(seed=seed),
+            kernel_initializer = tf.keras.initializers.glorot_uniform(),
             kernel_regularizer = tf.keras.regularizers.l2(kernel_weight_decay)
     ))
 
