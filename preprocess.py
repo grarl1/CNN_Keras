@@ -9,11 +9,12 @@ from PIL import Image
 def load_image(path):
     '''Load image from path. 
     :param path: image file path
-    :return: image
+    :return: normalized image
     :rtype: numpy.array
     '''
     image = Image.open(path)
-    return np.array(image)
+    image = np.array(image)
+    return normalize_image(image)
 
 def save_image(name, img, dir_path):
     '''Saves a normalized image to a directory path. Creates the directory if it does not exists.
@@ -58,9 +59,12 @@ def downsample_normalized(image, config):
     # Get scale
     scale = config.getint("fsrcnn", "upscale")
 
-    # Get image
+    # Denormalize
     output = denormalize_image(image)
-    output = output[:,:,0] 
+
+    # numpy -> image
+    if output.shape[2] == 1:
+        output = output[:,:,0] 
     output = Image.fromarray(output)
 
     # Check size
@@ -70,9 +74,16 @@ def downsample_normalized(image, config):
 
     # Rescale
     output = output.resize((width//scale, height//scale), Image.LANCZOS)
+
+    # image -> numpy
     output = np.array(output)
-    output = np.reshape(output, (height//scale, width//scale, 1))
-    return normalize_image(output)
+    if len(output.shape) == 2:
+        output = output.reshape((*output.shape, 1))
+
+    # Normalize
+    output = normalize_image(output)
+
+    return output
 
 def preprocess_label(image, config):
     '''Preprocess label
@@ -85,19 +96,30 @@ def preprocess_label(image, config):
     scale = config.getint("fsrcnn", "upscale")
 
     if model_name == "FSRCNN":
-        output = Image.fromarray(image) # Create PIL Image
+        # Denormalize
+        output = denormalize_image(image)
+
+        # numpy -> image
+        if output.shape[2] == 1:
+            output = output[:,:,0] 
+        output = Image.fromarray(output)
+
+        # Preprocess
         width, height = output.size
         output = output.crop((0, 0, width - width % scale, height - height % scale))
-        output = output.convert('YCbCr') # Convert to YCbCr
-        output = np.array(output) # Convert to numpy array
+        output = output.convert('YCbCr')  
+
+        # image -> numpy
+        output = np.array(output)
         output = output[:,:,0] # Keep Y channel, discard CbCr channels
-        output = normalize_image(output) # Normalize image
-        output = output.reshape(*output.shape, 1)
+        output = output.reshape((*output.shape, 1))
+
+        # Normalize
+        output = normalize_image(output)
         return output
 
     elif model_name == "IRCNN":
-        return normalize_image(image) # Normalize image
-
+        return image
     else:
         raise ValueError("Not supported network {}".format(model_name))
 
@@ -121,21 +143,19 @@ def crop_image_in_subpatches(image, crop_size, stride):
     :param crop_size: size of the crop
     :param stride: stride value
     :return: list of subpatches
-    :rtype: list(np.array)
+    :rtype: np.array
     '''
     # Create list for subpatches
     sub_patches = []
 
     if len(image.shape) == 3:
-        rows, cols, channels = image.shape
+        rows, cols, _ = image.shape
     else:
-        rows, cols, channels = (*image.shape, 1)
+        rows, cols = image.shape
 
     for x in range(0, rows - crop_size + 1, stride):
-      for y in range(0, cols - crop_size + 1, stride):
-        sub_patch = image[x : x + crop_size, y : y + crop_size]
-        sub_patch = sub_patch.reshape([crop_size, crop_size, channels])
-        sub_patches.append(sub_patch)
+        for y in range(0, cols - crop_size + 1, stride):
+            sub_patches.append(image[x : x + crop_size, y : y + crop_size, :])
           
     return np.asarray(sub_patches)
 
@@ -157,35 +177,36 @@ def generate_training_data_all(data_path, config):
     '''
     # Read config
     target_net = config.get("default", "target_net")
+    upscale = config.getint('fsrcnn', 'upscale')
     read_size = config.getint('training', 'read_size')
     batch_size = config.getint('training', 'batch_size')
     crop_size = config.getint('training', 'patch_crop_size')
-    stride = config.getint('training', 'patch_stride')
-    upscale = config.getint('fsrcnn', 'upscale')
     dcrop_size = (crop_size // upscale) if target_net == "FSRCNN" else crop_size
+    stride = config.getint('training', 'patch_stride')
     dstride = (stride // upscale) if target_net == "FSRCNN" else stride
 
-    # Read image list
+    # Read image files list
     file_paths = [os.path.join(data_path, f) for f in os.listdir(data_path)]
+    
     # Sort randomly
     np.random.shuffle(file_paths)
 
-    # Generate
+    # Containers
     data_gen, labels_gen = [], []
 
     # Generate
     for i in range(0, len(file_paths), read_size):
 
         # Read read_size images
-        labels, data = [], []
+        data, labels = [], []
         for file_path in file_paths[i : i + read_size]:
             # Read image
             image = load_image(file_path) 
             # Generate data
             datum, label = generate_training_datum(image, config)
             # Crop image in subpatches
-            labels.extend(crop_image_in_subpatches(label, crop_size, stride))
             data.extend(crop_image_in_subpatches(datum, dcrop_size, dstride))
+            labels.extend(crop_image_in_subpatches(label, crop_size, stride))
 
         # Sort crops randomly
         indices = np.random.permutation(len(labels))
@@ -199,9 +220,9 @@ def generate_training_data_all(data_path, config):
 
             # Pop data
             data_gen.extend(data[:len_to_pop])
+            data = data[len_to_pop:]
             labels_gen.extend(labels[:len_to_pop])
-            data = np.delete(data, range(len_to_pop), 0)
-            labels = np.delete(labels, range(len_to_pop), 0)
+            labels = labels[len_to_pop:]
 
             # Yield data
             if len(data_gen) == batch_size:
@@ -231,21 +252,20 @@ def merge(Y, image, config):
   :return: merged image
   '''
   # Denormalize Y channel
-  height, weight, _ = Y.shape
-  Y_out = Y.reshape((height, weight, 1))
-  Y_out = denormalize_image(Y_out)
+  Y_out = denormalize_image(Y)
 
-  # Convert image to YCbCr
-  Y_cbcr = Image.fromarray(image).convert("YCbCr")
-  # Super resolve all channels
-  Y_cbcr = Y_cbcr.resize((weight, height), Image.BICUBIC)
-  # Get CbCr channels
-  cbcr = np.array(Y_cbcr).reshape(height, weight, 3)[:,:,1:]
+  # Extract CbCr from image
+  cbcr = denormalize_image(image)
+  cbcr = Image.fromarray(cbcr).convert("YCbCr")
+  cbcr = cbcr.resize(Y.shape[1], Y.shape[0], Image.BICUBIC)
+  cbcr = np.array(cbcr)[:,:,1:]
 
   # Merge Y with CbCr
   output = np.concatenate((Y_out, cbcr), axis=-1)
   output = Image.fromarray(output, "YCbCr").convert("RGB")
-  return normalize_image(np.array(output))
+  output = np.array(output)
+  output = normalize_image(output)
+  return output
 
 def preinference(image, config):
     '''Preprocess image pre inference
@@ -265,7 +285,7 @@ def postinference(config, hr_image, lr_image=None):
     model_name = config.get("default", "target_net")
     if model_name == "FSRCNN":
         output = np.clip(hr_image, 0, 1)
-        return merge(hr_image, lr_image, config)
+        return merge(output, lr_image, config)
     elif model_name == "IRCNN":
         return np.clip(hr_image, 0, 1)
     else:
@@ -282,6 +302,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Calculate number of steps per epoch given a specific configuration')
     parser.add_argument('-d', '--data_path', type=str, required=True, help='Data path to load the images from')
     parser.add_argument('-c', '--config', type=str, default="config.ini", help='Network configuration file')
+    parser.add_argument('-o', '--output', type=str, default="preprocess_dir", help='Output directory for saved data')
+    parser.add_argument('-s', '--save', action="store_true", help='Save the data in the preprocess directory')
 
     # Parse arguments
     args = parser.parse_args()
@@ -293,13 +315,14 @@ if __name__ == '__main__':
     # Count batches and crops
     n_batches = 0
     n_crops = 0
-#    counter = 0
+    counter = 0
     for x, y in generate_training_data_all(args.data_path, config):
 
-#        for x0, y0 in zip(x,y):
-#            save_image("x0_{}.png".format(counter), x0[:,:,0], "preprocess_dir")
-#            save_image("y0_{}.png".format(counter), y0[:,:,0], "preprocess_dir")
-#            counter += 1
+        if args.save:
+            for x0, y0 in zip(x,y):
+                save_image("x_{}.png".format(counter), x0[:,:,0], args.output)
+                save_image("y_{}.png".format(counter), y0[:,:,0], args.output)
+                counter += 1
 
         n_batches += 1
         n_crops += len(x)
