@@ -257,7 +257,7 @@ def merge(Y, image, config):
   # Extract CbCr from image
   cbcr = denormalize_image(image)
   cbcr = Image.fromarray(cbcr).convert("YCbCr")
-  cbcr = cbcr.resize(Y.shape[1], Y.shape[0], Image.BICUBIC)
+  cbcr = cbcr.resize((Y.shape[1], Y.shape[0]), Image.BICUBIC)
   cbcr = np.array(cbcr)[:,:,1:]
 
   # Merge Y with CbCr
