@@ -179,9 +179,6 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output', type=str, default="output", help='Test/Inference output directory path')
     parser.add_argument('-c', '--config', type=str, default="config.ini", help='Network configuration file')
 
-    # Set random seed
-    np.random.seed(0)
-
     # Parse arguments
     args = parser.parse_args()
 
