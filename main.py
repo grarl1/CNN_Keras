@@ -31,7 +31,7 @@ def get_model(config, input_shape=None):
             input_shape = (crop_size // upscale, crop_size // upscale, 1)
         model = FSRCNN(input_shape, upscale)
         loss = tf.keras.losses.MeanSquaredError()
-        optimizer = tf.keras.optimizers.SGD(config.getfloat("training", "init_lr"))
+        optimizer = tf.keras.optimizers.Adam(config.getfloat("training", "init_lr"))
 
     elif model_name == "IRCNN":
 
@@ -43,7 +43,7 @@ def get_model(config, input_shape=None):
 
     else:
         raise ValueError("Not supported network {}".format(model_name))
-
+        
     # Compile model
     model.compile(
         loss = loss,
