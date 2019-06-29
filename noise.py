@@ -3,6 +3,8 @@ import argparse
 import numpy as np
 from PIL import Image
 
+_verbose = False
+
 def uniform(image, noise_ratio):
     '''Applies uniform noise to an image
     :param image: numpy.array
@@ -93,6 +95,9 @@ def add_random_noise(img):
     else:
         args = ()
 
+    if _verbose:
+        print ("Calling {} with args {}".format(noise_function, args))
+
     return noise_function(img, *args)
 
 def add_noise_to_images(input_dir, output_dir, noise_function, noise_args):
@@ -133,12 +138,14 @@ if __name__ == "__main__":
     parser.add_argument('-r', '--ratio', type=float, default=0.1, help='Noise ratio. Only applicable to uniform or salt and pepper noises')
     parser.add_argument('-m', '--mean', type=float, default=0.0, help='Mean. Only applicable to gaussian noise')
     parser.add_argument('-s', '--stdev', type=float, default=0.01, help='Standard deviation. Only applicable to gaussian noise')
+    parser.add_argument('-v', '--verbose', action="store_true")
 
     # Set seed
     np.random.seed(0)
 
     # Parse args
     args = parser.parse_args()
+    _verbose = args.verbose
 
     # Create output dir
     if not os.path.exists(args.output_dir):
