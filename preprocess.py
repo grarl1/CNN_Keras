@@ -159,16 +159,6 @@ def crop_image_in_subpatches(image, crop_size, stride):
           
     return np.asarray(sub_patches)
 
-def generate_training_datum(image, config):
-    '''Generate a single datum from a label
-    :param image: image label
-    :param config: config parser
-    :return: data from label
-    '''
-    label = preprocess_label(image, config) 
-    data = generate_data(label, config)
-    return (data, label)
-
 def generate_training_data_all(data_path, config):
     '''Yields pre-processed training data
     :param data_path: training images directory path
@@ -181,9 +171,7 @@ def generate_training_data_all(data_path, config):
     read_size = config.getint('training', 'read_size')
     batch_size = config.getint('training', 'batch_size')
     crop_size = config.getint('training', 'patch_crop_size')
-    dcrop_size = (crop_size // upscale) if target_net == "FSRCNN" else crop_size
     stride = config.getint('training', 'patch_stride')
-    dstride = (stride // upscale) if target_net == "FSRCNN" else stride
 
     # Read image files list
     file_paths = [os.path.join(data_path, f) for f in os.listdir(data_path)]
@@ -202,11 +190,14 @@ def generate_training_data_all(data_path, config):
         for file_path in file_paths[i : i + read_size]:
             # Read image
             image = load_image(file_path) 
+            # Preprocess label
+            label = preprocess_label(image, config)
+            # Crop label in subpatches
+            labels_to_extend = crop_image_in_subpatches(label, crop_size, stride)
             # Generate data
-            datum, label = generate_training_datum(image, config)
-            # Crop image in subpatches
-            data.extend(crop_image_in_subpatches(datum, dcrop_size, dstride))
-            labels.extend(crop_image_in_subpatches(label, crop_size, stride))
+            data_to_extend = [generate_data(x) for x in labels_to_extend]
+            labels.extend(labels_to_extend)
+            data.extend(data_to_extend)
 
         # Sort crops randomly
         indices = np.random.permutation(len(labels))
