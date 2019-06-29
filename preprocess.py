@@ -195,7 +195,7 @@ def generate_training_data_all(data_path, config):
             # Crop label in subpatches
             labels_to_extend = crop_image_in_subpatches(label, crop_size, stride)
             # Generate data
-            data_to_extend = [generate_data(x) for x in labels_to_extend]
+            data_to_extend = [generate_data(x, config) for x in labels_to_extend]
             labels.extend(labels_to_extend)
             data.extend(data_to_extend)
 
