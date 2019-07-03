@@ -87,11 +87,11 @@ def add_random_noise(img):
     noise_function = np.random.choice(noise_functions)
     
     if noise_function == uniform:
-        args = (0.05 + np.random.rand() * 0.2,)
+        args = (0.05 + np.random.rand() * 0.15,)
     elif noise_function == gaussian:
-        args = (0, 0.05 + np.random.rand() * 0.2)
+        args = (0, 0.05 + np.random.rand() * 0.1)
     elif noise_function == salt_and_pepper:
-        args = (0.01 + np.random.rand() * 0.14,)
+        args = (0.05 + np.random.rand() * 0.15,)
     else:
         args = ()
 

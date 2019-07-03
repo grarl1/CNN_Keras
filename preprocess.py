@@ -232,7 +232,6 @@ def generate_training_data(data_path, config):
     (batch_size, rows, columns, channels)
     '''
     while True:
-        np.random.seed(0)
         for data in generate_training_data_all(data_path, config):
             yield data
 

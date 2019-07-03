@@ -115,6 +115,12 @@ def get_train_callbacks(config):
         mode="min",
         period=config.getint("training", "checkpoint_period"),
     ))
+    
+    def epoch_begin(epoch, logs):
+        print("Resetting seed")
+        np.random.seed(0)
+
+    callbacks.append(tf.keras.callbacks.LambdaCallback(on_epoch_begin=epoch_begin))
 
     return callbacks
 
@@ -141,7 +147,7 @@ def train(data_path, val_data_path, config):
     
     # Train model
     model.fit_generator(dataflow, steps_per_epoch=steps, epochs=config.getint("training", "epochs"), verbose=1,
-        callbacks=get_train_callbacks(config), validation_data=val_dataflow, validation_steps=val_steps)
+        callbacks=get_train_callbacks(config), validation_data=val_dataflow, validation_steps=val_steps, workers=0)
 
 def infer(test_path, output_path, config):
     '''Train the network
