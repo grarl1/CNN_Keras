@@ -118,7 +118,7 @@ def get_train_callbacks(config):
     
     def epoch_begin(epoch, logs):
         print("Resetting seed")
-        np.random.seed(0)
+        np.random.seed(1)
 
     callbacks.append(tf.keras.callbacks.LambdaCallback(on_epoch_begin=epoch_begin))
 
