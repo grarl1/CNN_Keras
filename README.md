@@ -10,7 +10,7 @@ Implementation of FSRCNN model based on [Accelerating the Super-Resolution Convo
 Implementation of IRCNN model Keras based on [Learning Deep CNN Denoiser Prior for Image Restoration](http://www4.comp.polyu.edu.hk/~cslzhang/paper/IRCNN_CVPR17.pdf)
 
 ## Saved checkpoints
-This repository contains some pre-trained models that can be enabled by creating symbolic links to the checkpoint directory and the configuration file. This way the code will detect these files and will load the weights of the corresponding model.
+This repository contains some pre-trained models that can be enabled by creating symbolic links to the checkpoint directory and the configuration file in the root path. This way the code will detect these files and will load the weights of the corresponding model.
 
 ### FSRCNN
 ```
