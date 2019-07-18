@@ -8,3 +8,6 @@ Implementation of FSRCNN model based on [Accelerating the Super-Resolution Convo
 
 ### IRCNN
 Implementation of IRCNN model Keras based on [Learning Deep CNN Denoiser Prior for Image Restoration](http://www4.comp.polyu.edu.hk/~cslzhang/paper/IRCNN_CVPR17.pdf)
+
+## Usage
+### For training
